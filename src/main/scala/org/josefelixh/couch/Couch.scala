@@ -11,7 +11,7 @@ class Couch(private val dbName: String) {
   val couchUrl = "https://josefelixh.cloudant.com"
   val couch: String => WS.WSRequestHolder = { path =>
     WS.url(s"$couchUrl$path")
-      .withAuth("josefelixh", "l0nd0nJoel", Realm.AuthScheme.BASIC)
+      .withAuth("josefelixh", "cloudant123", Realm.AuthScheme.BASIC)
       .withHeaders(
         "Accept" -> "application/json",
         "Content-Type" -> "application/json"
