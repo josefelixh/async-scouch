@@ -36,13 +36,6 @@ object WS {
 
   def client =
     clientHolder.getOrElse {
-//      val playConfig = play.api.Play.maybeApplication.map(_.configuration)
-//      val asyncHttpConfig = new AsyncHttpClientConfig.Builder()
-//        .setConnectionTimeoutInMs(playConfig.flatMap(_.getMilliseconds("ws.timeout")).getOrElse(120000L).toInt)
-//        .setRequestTimeoutInMs(playConfig.flatMap(_.getMilliseconds("ws.timeout")).getOrElse(120000L).toInt)
-//        .setFollowRedirects(playConfig.flatMap(_.getBoolean("ws.followRedirects")).getOrElse(true))
-//        .setUseProxyProperties(playConfig.flatMap(_.getBoolean("ws.useProxyProperties")).getOrElse(true))
-
       val asyncHttpConfig = new AsyncHttpClientConfig.Builder()
         .setConnectionTimeoutInMs((120000L).toInt)
         .setRequestTimeoutInMs((120000L).toInt)
@@ -52,12 +45,6 @@ object WS {
         .setMaximumConnectionsPerHost(10)
         .setMaximumConnectionsTotal(100)
 
-//      playConfig.flatMap(_.getString("ws.useragent")).map { useragent =>
-//        asyncHttpConfig.setUserAgent(useragent)
-//      }
-//      if (playConfig.flatMap(_.getBoolean("ws.acceptAnyCertificate")).getOrElse(false) == false) {
-//        asyncHttpConfig.setSSLContext(SSLContext.getDefault)
-//      }
       val innerClient = new AsyncHttpClient(asyncHttpConfig.build())
       clientHolder = Some(innerClient)
       innerClient
@@ -343,12 +330,12 @@ object WS {
     }
 
 //    private[josefelixh] def prepare[T](method: String, body: T)(implicit wrt: Writeable[T], ct: ContentTypeOf[T]) = {
-    private[josefelixh] def prepare(method: String, body: String) = {
+    private[josefelixh] def prepare(method: String, body: String)(implicit codec: Codec) = {
       val request = new WSRequest(method, auth, calc).setUrl(url)
 //        .setHeaders(Map("Content-Type" -> Seq(ct.mimeType.getOrElse("text/plain"))) ++ headers)
         .setHeaders(Map("Content-Type" -> Seq("application/json")) ++ headers)
         .setQueryString(queryString)
-        .setBody(body)
+        .setBody(codec.encode(body))
       followRedirects.map(request.setFollowRedirects(_))
       timeout.map { t: Int =>
         val config = new PerRequestConfig()

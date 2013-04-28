@@ -1,6 +1,6 @@
 package org.josefelixh
 
-import org.josefelixh.couch.CouchDB
+import org.josefelixh.couch.{CouchDocument, Couch}
 import scala.util.parsing.json.JSON
 
 
@@ -9,12 +9,14 @@ object Asyncscouch extends App {
 
   import scala.concurrent.ExecutionContext.Implicits.global
 
-  CouchDB("heroku").databases map {
+  implicit val couch = Couch("heroku")
+
+  couch.databases map {
     value => println(value.body)
   }
 
   val future = for {
-    value <- CouchDB("heroku").create
+    value <- couch.documents
   } yield JSON.parseFull(value.body)
 
   future map {
@@ -22,6 +24,25 @@ object Asyncscouch extends App {
     case _ => println("ooooops")
   }
 
-  Thread.sleep(5000)
+  val doc = "{\"system\":\"badger\",\"type\":\"mushroom\",\"value\":\"snake\"}"
+
+  CouchDocument(None, None, doc).create map { response =>
+    println(response.status + " " + response.body)
+  }
+
+  CouchDocument(Some("22790e05baaa21af392c8239807ea339"), None, "").retrieve map { response =>
+    println(response.status + " " + response.body)
+  }
+
+  CouchDocument(Some("myid"), None, doc).create map { response =>
+    println(response.status + " " + response.body)
+
+    CouchDocument(Some("myid"), None, doc).retrieve map { response =>
+      println(response.status + " " + response.body)
+    }
+
+  }
+
+  Thread.sleep(10000)
   System.exit(0)
 }
