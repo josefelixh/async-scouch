@@ -20,13 +20,17 @@ case class CouchDocument(id: Option[String] = None, rev: Option[String] = None, 
   }
 
   def delete(implicit couch: Couch) = {
-    couch.db(s"/${id.get}").delete()
+    couch.db(s"/${id.get}").withQueryString(
+      "rev" -> rev.get
+    ).delete()
   }
 
   def update(implicit couch: Couch) = {
     couch.db(s"/${id.get}").withQueryString(
       "rev" -> rev.get
-    )
+    ).withHeaders(
+      "If-Match" -> rev.get
+    ).put(this.toJson)
   }
 
 }
