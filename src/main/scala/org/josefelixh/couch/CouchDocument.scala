@@ -11,26 +11,20 @@ case class CouchDocument(id: Option[String] = None, rev: Option[String] = None, 
     case None => doc
   }
 
-  def create(implicit couch: Couch) = {
-    couch.db("/").post(this.toJson)
-  }
+  def create(implicit couch: Couch) = couch.db("/").post(this.toJson)
 
-  def retrieve(implicit couch: Couch) = {
-    couch.db(s"/${id.get}").get()
-  }
+  def retrieve(implicit couch: Couch) = couch.db(s"/${id.get}").get()
 
-  def delete(implicit couch: Couch) = {
+  def delete(implicit couch: Couch) =
     couch.db(s"/${id.get}").withQueryString(
       "rev" -> rev.get
     ).delete()
-  }
 
-  def update(implicit couch: Couch) = {
+  def update(implicit couch: Couch) =
     couch.db(s"/${id.get}").withQueryString(
       "rev" -> rev.get
     ).withHeaders(
       "If-Match" -> rev.get
     ).put(this.toJson)
-  }
 
 }
