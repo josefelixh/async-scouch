@@ -24,6 +24,19 @@ object Asyncscouch extends App {
   implicit val roleFormat = Json.format[Role]
   implicit val profileFormat = Json.format[Profile]
 
+  val createProfile1 = profile create
+  val createProfile2 = ("Profile_TEST", profile) create
+
+  val future = for {
+    r1 <- createProfile1
+    r2 <- createProfile2
+  } yield {
+    println(s"Response1 : $r1")
+    println(s"Response2 : $r2")
+  }
+
+  Await.ready(future, 30 seconds)
+
   def deleteAll =
     couch.documents map { response =>
       println(s"Documents ${response.json}")
@@ -40,12 +53,12 @@ object Asyncscouch extends App {
         case None => concurrent.future(println("No Id found"))
     }}
 
-  Await.result(deleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
+//  Await.result(deleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
 
 //  val fProfile = profile create
 //
-//  (for (id <- 1 to 1000) yield {
-//    CouchDocument(Some("PROFILE_"+id), None, profile) create
+//  (for (id <- 1 to 1) yield {
+//    ("PROFILE_"+id, None, profile) create
 //  }) map( x => Await.ready(x, 10 seconds))
 
 

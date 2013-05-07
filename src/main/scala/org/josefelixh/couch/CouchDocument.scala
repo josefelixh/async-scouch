@@ -6,19 +6,21 @@ import scala.concurrent.{ExecutionContext, Future}
 import org.josefelixh.libs.http.Response
 
 object CouchDocument {
-  implicit def toCouchDocument[T](t: T): CouchDocument[T] = CouchDocument(None, None, t)
+  implicit def toCouchDocument[T](t: T)(implicit fmt: Writes[T]): CouchDocument[T] =
+    CouchDocument(None, None, t)
+
+  implicit def tuple2ToCouchDocument[T](rt: (String, T))(implicit fmt: Writes[T]): CouchDocument[T] =
+    CouchDocument(Some(rt._1), None, rt._2)
+
+  implicit def tuple3ToCouchDocument[T](rt: (String, String, T))(implicit fmt: Writes[T]): CouchDocument[T] =
+    CouchDocument(Some(rt._1), Some(rt._2), rt._3)
 }
 case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T) {
 
   def create(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] = {
-    def merge_Id(id: String) = (__).json.update {
-      __.read[JsObject] map { o => Json.obj("_id" -> id) ++ o }
-    }
-    val jsDoc = id match {
-      case Some(x) => Json.toJson(this.doc).transform(merge_Id(x)).asOpt
-      case None => Some(Json.toJson(this.doc))
-    }
-    couch.db("/").post(jsDoc.get.toString()) map { IdAndRevision }
+    val jsDoc = Json.toJson(this.doc).transform(AddCouchId).asOpt
+
+    couch.db("/").post(jsDoc.get.toString()) map { IdAndRevisionDocument }
   }
 
   def retrieve(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
@@ -47,7 +49,7 @@ case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = Non
     } getOrElse(throw new RuntimeException)
   }
 
-  private val IdAndRevision: Response => CouchDocument[T] = { response =>
+  private val IdAndRevisionDocument: Response => CouchDocument[T] = { response =>
     (response.json \ "ok").validate[Boolean] map { isOk =>
       if (!isOk) throw new RuntimeException
     }
@@ -56,5 +58,16 @@ case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = Non
       id = (response.json \ "id").validate[String].asOpt,
       rev = (response.json \ "rev").validate[String].asOpt
     )
+  }
+
+  private val AddCouchId = {
+    val addCouchId =  __.json.update {
+      __.read[JsObject] map { o => Json.obj("_id" -> id.get) ++ o }
+    }
+
+    id match {
+      case Some(couchId) => addCouchId
+      case None => __.read[JsObject]
+    }
   }
 }
