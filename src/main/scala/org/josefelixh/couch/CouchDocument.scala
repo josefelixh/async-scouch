@@ -15,7 +15,7 @@ object CouchDocument {
   implicit def tuple3ToCouchDocument[T](rt: (String, String, T))(implicit fmt: Writes[T]): CouchDocument[T] =
     CouchDocument(Some(rt._1), Some(rt._2), rt._3)
 }
-case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T) {
+case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T)(implicit fmt: Writes[T]) {
 
   def create(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] = {
     val jsDoc = Json.toJson(this.doc).transform(AddCouchId).asOpt
