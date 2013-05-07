@@ -1,62 +1,36 @@
 package org.josefelixh
 
-import org.josefelixh.couch.{CouchDocument, Couch}
-import scala.util.parsing.json.JSON
+import org.josefelixh.couch._
+import org.josefelixh.couch.CouchDocument._
+import play.api.libs.json._
+import scala.concurrent.Await
+import scala.concurrent.duration._
+import scala.concurrent.ExecutionContext.Implicits.global
 
+
+case class Role(val name: String, val permissions: Int)
+case class Profile(val id: String, level: Int, roles: Seq[Role])
 
 object Asyncscouch extends App {
   println("Hello, async-scouch")
 
-  import scala.concurrent.ExecutionContext.Implicits.global
-
   implicit val couch = Couch("heroku")
 
-  couch.databases map {
-    value => println(value.body)
-  }
+  val role = Role("admin", 777)
+  val profile = Profile("badger", 0, Vector(role))
 
-  val future = for {
-    value <- couch.documents
-  } yield JSON.parseFull(value.body)
+  implicit val roleFormat = Json.format[Role]
+  implicit val profileFormat = Json.format[Profile]
 
-  future map {
-    case Some(x: Map[_, _]) => println(x.mkString("\n"))
-    case _ => println("ooooops")
-  }
+  val fProfile = profile create
 
-  val doc = "{\"system\":\"badger\",\"type\":\"mushroom\",\"value\":\"snake\"}"
-
-//  CouchDocument(None, None, doc).create map { response =>
-//    println(response.status + " " + response.body)
-//  }
-//
-//  CouchDocument(Some("22790e05baaa21af392c8239807ea339"), None, "").retrieve map { response =>
-//    println(response.status + " " + response.body)
-//  }
-
-  CouchDocument(Some("myid"), None, doc).create map { response =>
-    println("CREATE: " + response.status + " " + response.body)
-
-    CouchDocument(Some("myid"), None, doc).retrieve map { response =>
-      println("RETRIEVE: " + response.status + " " + response.body)
-
-      val rev = (JSON.parseFull(response.body).get.asInstanceOf[Map[String, Any]].get("_rev")).asInstanceOf[Option[String]]
-
-      CouchDocument(Some("myid"), rev, doc).update map { response =>
-        println("UPDATE: " + response.status + " " + response.body)
-
-        val rev = (JSON.parseFull(response.body).get.asInstanceOf[Map[String, Any]].get("rev")).asInstanceOf[Option[String]]
-
-        CouchDocument(Some("myid"), rev, doc).delete map { response =>
-          println("DELETE: " + response.status + " " + response.body)
-        }
-
-      }
-    }
-  }
+  (for (id <- 1 to 10) yield {
+    CouchDocument(Some("0APROFILE_"+id), None, profile) create
+  }) map( x => Await.ready(x, 30 seconds))
 
 
 
-  Thread.sleep(10000)
+//  Thread.sleep(30000)
   System.exit(0)
 }
+

@@ -42,8 +42,7 @@ object WS {
         .setFollowRedirects((true))
         .setUseProxyProperties((true))
         .setSSLContext(SSLContext.getDefault)
-        .setMaximumConnectionsPerHost(10)
-        .setMaximumConnectionsTotal(100)
+        .setAllowPoolingConnection(true)
 
       val innerClient = new AsyncHttpClient(asyncHttpConfig.build())
       clientHolder = Some(innerClient)
@@ -333,7 +332,8 @@ object WS {
     private[josefelixh] def prepare(method: String, body: String)(implicit codec: Codec) = {
       val request = new WSRequest(method, auth, calc).setUrl(url)
 //        .setHeaders(Map("Content-Type" -> Seq(ct.mimeType.getOrElse("text/plain"))) ++ headers)
-        .setHeaders(Map("Content-Type" -> Seq("application/json")) ++ headers)
+//        .setHeaders(Map("Content-Type" -> Seq("application/json")) ++ headers)
+          .setHeaders(headers)
         .setQueryString(queryString)
         .setBody(codec.encode(body))
       followRedirects.map(request.setFollowRedirects(_))
@@ -353,7 +353,7 @@ object WS {
 case class Response(ahcResponse: AHCResponse) {
 
   import scala.xml._
-//  import play.api.libs.json._
+  import play.api.libs.json._
 
   def getAHCResponse = ahcResponse
 
@@ -379,7 +379,7 @@ case class Response(ahcResponse: AHCResponse) {
 
   lazy val xml: Elem = XML.loadString(body)
 
-//  lazy val json: JsValue = Json.parse(ahcResponse.getResponseBodyAsBytes)
+  lazy val json: JsValue = Json.parse(ahcResponse.getResponseBodyAsBytes)
 
 }
 
