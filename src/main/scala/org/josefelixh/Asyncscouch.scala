@@ -27,30 +27,30 @@ object Asyncscouch extends App {
   def deleteAll =
     couch.documents map { response =>
       println(s"Documents ${response.json}")
-      (response.json \\ "id") map { _.validate[String].asOpt } map {
-        case id @ Some(_) => {
+      val ids = (response.json \\ "id") map { _.validate[String].asOpt }
+      for (id <- ids) yield id match {
+        case x @ Some(_) => {
           println("Trying to delete id: " + id.get)
           for {
-            doc <- CouchDocument[JsValue](id, None, JsNull).retrieve
+            doc <- CouchDocument[JsValue](x, None, JsNull).retrieve
             deleteResponse <- doc.delete
-          } yield println(s"Status: ${deleteResponse.statusText} Body: ${deleteResponse.body}")
+          } yield concurrent.future(println(s"Status: ${deleteResponse.statusText} Body: ${deleteResponse.body}"))
         }
 
-        case None => println("No Id found")
+        case None => concurrent.future(println("No Id found"))
     }}
 
-  def createSome = {
-    (for (id <- 1 to 10) yield {
-      CouchDocument(Some("0APROFILE_"+id), None, profile) create
-    })
-  }
+  Await.result(deleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
 
-  val delete = deleteAll
-  Thread.sleep(20000)
-  val create = createSome
+//  val fProfile = profile create
+//
+//  (for (id <- 1 to 1000) yield {
+//    CouchDocument(Some("PROFILE_"+id), None, profile) create
+//  }) map( x => Await.ready(x, 10 seconds))
 
-  (delete +: create) map { f => Await.ready(f, 10 seconds)}
-//  Thread.sleep(20000)
+
+
+//  Thread.sleep(30000)
   System.exit(0)
 }
 

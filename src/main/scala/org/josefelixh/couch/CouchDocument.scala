@@ -11,8 +11,11 @@ object CouchDocument {
 case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T) {
 
   def create(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] = {
+    def merge_Id(id: String) = (__).json.update {
+      __.read[JsObject] map { o => Json.obj("_id" -> id) ++ o }
+    }
     val jsDoc = id match {
-      case Some(x) => Json.toJson(this.doc).transform((__ \ '_id).json.put(JsString(x))).asOpt
+      case Some(x) => Json.toJson(this.doc).transform(merge_Id(x)).asOpt
       case None => Some(Json.toJson(this.doc))
     }
     couch.db("/").post(jsDoc.get.toString()) map { IdAndRevision }
