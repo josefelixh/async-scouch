@@ -24,15 +24,19 @@ object Asyncscouch extends App {
   implicit val roleFormat = Json.format[Role]
   implicit val profileFormat = Json.format[Profile]
 
-  val createProfile1 = profile create
-  val createProfile2 = ("Profile_TEST", profile) create
 
   val future = for {
-    r1 <- createProfile1
-    r2 <- createProfile2
+//    r1 <- ((profile) create)
+    r2 <- (("Update_TEST", profile) create)
+//    u1 <- r1 update (current => current.copy(level = 1))
+    u2 <- r2 update (current => current.copy(level = 10))
+    d2 <- u2 delete
   } yield {
-    println(s"Response1 : $r1")
+//    println(s"Response1 : $r1")
     println(s"Response2 : $r2")
+//    println(s"Update1 : $u1")
+    println(s"Update2 : $u2")
+    println(s"Delete2 : ${d2.json}")
   }
 
   Await.ready(future, 30 seconds)

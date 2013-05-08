@@ -6,24 +6,25 @@ import scala.concurrent.{ExecutionContext, Future}
 import org.josefelixh.libs.http.Response
 
 object CouchDocument {
-  implicit def toCouchDocument[T](t: T)(implicit fmt: Writes[T]): CouchDocument[T] =
+  implicit def toCouchDocument[T](t: T)(implicit fmt: Format[T]): CouchDocument[T] =
     CouchDocument(None, None, t)
 
-  implicit def tuple2ToCouchDocument[T](rt: (String, T))(implicit fmt: Writes[T]): CouchDocument[T] =
+  implicit def tuple2ToCouchDocument[T](rt: (String, T))(implicit fmt: Format[T]): CouchDocument[T] =
     CouchDocument(Some(rt._1), None, rt._2)
 
-  implicit def tuple3ToCouchDocument[T](rt: (String, String, T))(implicit fmt: Writes[T]): CouchDocument[T] =
+  implicit def tuple3ToCouchDocument[T](rt: (String, String, T))(implicit fmt: Format[T]): CouchDocument[T] =
     CouchDocument(Some(rt._1), Some(rt._2), rt._3)
 }
-case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T)(implicit fmt: Writes[T]) {
 
-  def create(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] = {
+case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: T)(implicit fmt: Format[T]) {
+
+  def create(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
     val jsDoc = Json.toJson(this.doc).transform(AddCouchId).asOpt
 
     couch.db("/").post(jsDoc.get.toString()) map { IdAndRevisionDocument }
   }
 
-  def retrieve(implicit couch: Couch, format: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
+  def retrieve(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] =
     couch.db(s"/${id.get}").get() map { revisionAndDocument }
 
   def delete(implicit couch: Couch) =
@@ -31,7 +32,7 @@ case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = Non
       "rev" -> rev.get
     ).delete()
 
-  def update(updator: T => T)(implicit couch: Couch, fmt: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
+  def update(updator: T => T)(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] =
     couch.db(s"/${id.get}").withQueryString(
       "rev" -> rev.get
     ).withHeaders(
@@ -40,7 +41,7 @@ case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = Non
       revisionAndDocument
     }
 
-  private def revisionAndDocument(response: Response)(implicit fmt: Format[T]): CouchDocument[T] = {
+  private def revisionAndDocument(response: Response): CouchDocument[T] = {
     response.json.transform((__ \ '_id).json.prune andThen ((__ \ '_rev).json.prune)) map { js =>
       this.copy(
         rev = (response.json \ "_rev").validate[String].asOpt,
