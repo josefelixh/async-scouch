@@ -8,14 +8,12 @@ import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
 
 
-case class Role(val name: String, val permissions: Int)
-case class Profile(val id: String, level: Int, roles: Seq[Role])
 
 object Asyncscouch extends App {
-  import scala.language.postfixOps
-
   println("Hello, async-scouch")
 
+  case class Role(name: String, permissions: Int)
+  case class Profile(id: String, level: Int, roles: Seq[Role])
 
   val role = Role("admin", 777)
   val profile = Profile("badger", 0, Vector(role))
@@ -24,24 +22,34 @@ object Asyncscouch extends App {
   implicit val roleFormat = Json.format[Role]
   implicit val profileFormat = Json.format[Profile]
 
-
   val future = for {
-//    r1 <- ((profile) create)
-    r2 <- (("Update_TEST", profile) create)
-//    u1 <- r1 update (current => current.copy(level = 1))
-    u2 <- r2 update (current => current.copy(level = 10))
-    d2 <- u2 delete
+    r1 <- create(profile)
+    docId = Id[Profile](r1.id.get)
+    g1 <- (docId.retrieve)
+    u1 <- r1 update (current => current.copy(level = 1))
+    g2 <- (docId.retrieve)
+    d1 <- u1.delete
   } yield {
-//    println(s"Response1 : $r1")
-    println(s"Response2 : $r2")
-//    println(s"Update1 : $u1")
-    println(s"Update2 : $u2")
-    println(s"Delete2 : ${d2.json}")
+    println(s"CREATED : $r1")
+    println(s"RETREIVED : $g1")
+    println(s"UPDATED : $u1")
+    println(s"RETREIVED : $g2")
+    println(s"DELETED : ${d1.json}")
+    System.exit(0)
   }
 
-  Await.ready(future, 30 seconds)
+  val future2 = {
+    import CouchDocument._
+    create(profile)
+  }
+  future.onFailure {
+    case t => println("An error has occured: " + t.getMessage)
+  }
 
-  def deleteAll =
+  import language.postfixOps
+  Await.result(future, 30 seconds)
+
+  def DeleteAll =
     couch.documents map { response =>
       println(s"Documents ${response.json}")
       val ids = (response.json \\ "id") map { _.validate[String].asOpt }
@@ -49,7 +57,7 @@ object Asyncscouch extends App {
         case x @ Some(_) => {
           println("Trying to delete id: " + id.get)
           for {
-            doc <- CouchDocument[JsValue](x, None, JsNull).retrieve
+            doc <- CouchDocument[JsValue](x, None, Some(JsNull)).retrieve
             deleteResponse <- doc.delete
           } yield concurrent.future(println(s"Status: ${deleteResponse.statusText} Body: ${deleteResponse.body}"))
         }
@@ -59,15 +67,6 @@ object Asyncscouch extends App {
 
 //  Await.result(deleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
 
-//  val fProfile = profile create
-//
-//  (for (id <- 1 to 1) yield {
-//    ("PROFILE_"+id, None, profile) create
-//  }) map( x => Await.ready(x, 10 seconds))
-
-
-
-//  Thread.sleep(30000)
   System.exit(0)
 }
 
