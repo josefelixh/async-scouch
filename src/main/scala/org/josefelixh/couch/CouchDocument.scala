@@ -15,6 +15,9 @@ object CouchDocument {
   def create[T](t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
     CouchDocument[T](None, None, Some(t)).create
 
+  def create[T](id: String, t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
+    CouchDocument[T](Some(id), None, Some(t)).create
+
   implicit def toCouchDocument[T](t: T)(implicit fmt: Format[T]): CouchDocument[T] =
     CouchDocument(None, None, Some(t))
 

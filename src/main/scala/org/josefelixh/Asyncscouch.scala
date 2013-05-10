@@ -23,25 +23,24 @@ object Asyncscouch extends App {
   implicit val profileFormat = Json.format[Profile]
 
   val future = for {
-    r1 <- create(profile)
-    docId = Id[Profile](r1.id.get)
-    g1 <- (docId.retrieve)
-    u1 <- r1 update (current => current.copy(level = 1))
-    g2 <- (docId.retrieve)
-    d1 <- u1.delete
+    createdNoId <- create(profile)
+    created <- create("PROFILE_ID", profile)
+    docId = Id[Profile](createdNoId.id.get)
+    retreived <- docId.retrieve
+    updated <- createdNoId.update(current => current.copy(level = 1))
+    updateRetreived <- docId.retrieve
+    deleteResponse <- updated.delete
+    deleteResponse2 <- created.delete
   } yield {
-    println(s"CREATED : $r1")
-    println(s"RETREIVED : $g1")
-    println(s"UPDATED : $u1")
-    println(s"RETREIVED : $g2")
-    println(s"DELETED : ${d1.json}")
-    System.exit(0)
+    println(s"CREATED : $createdNoId")
+    println(s"CREATED : $created")
+    println(s"RETREIVED : $retreived")
+    println(s"UPDATED : $updated")
+    println(s"RETREIVED : $updateRetreived")
+    println(s"DELETED : ${deleteResponse.json}")
+    println(s"DELETED : ${deleteResponse2.json}")
   }
 
-  val future2 = {
-    import CouchDocument._
-    create(profile)
-  }
   future.onFailure {
     case t => println("An error has occured: " + t.getMessage)
   }
@@ -65,7 +64,7 @@ object Asyncscouch extends App {
         case None => concurrent.future(println("No Id found"))
     }}
 
-//  Await.result(deleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
+//  Await.result(DeleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
 
   System.exit(0)
 }

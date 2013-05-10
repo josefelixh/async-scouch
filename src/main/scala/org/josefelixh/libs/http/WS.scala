@@ -4,7 +4,6 @@ import java.io.File
 import scala.concurrent.{ Future, Promise }
 import play.api.libs.iteratee._
 import play.api.libs.iteratee.Input._
-//import play.api.http.{ Writeable, ContentTypeOf }
 import com.ning.http.client.{
 AsyncHttpClient,
 AsyncHttpClientConfig,
