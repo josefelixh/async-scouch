@@ -12,26 +12,21 @@ object CouchDocument {
     CouchDocument(Some(id), None, doc)
   }
 
-  def create[T](t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
-    CouchDocument[T](None, None, Some(t)).create
+  def apply[T](t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): CouchDocument[T] =
+    CouchDocument[T](None, None, Some(t))
 
-  def create[T](id: String, t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): Future[CouchDocument[T]] =
-    CouchDocument[T](Some(id), None, Some(t)).create
+  def apply[T](id: String, t: T)(implicit couch: Couch,  fmt: Format[T], execCtx: ExecutionContext): CouchDocument[T] =
+    CouchDocument[T](Some(id), None, Some(t))
 
-  implicit def toCouchDocument[T](t: T)(implicit fmt: Format[T]): CouchDocument[T] =
-    CouchDocument(None, None, Some(t))
-
-  implicit def tuple2ToCouchDocument[T](rt: (String, T))(implicit fmt: Format[T]): CouchDocument[T] =
-    CouchDocument(Some(rt._1), None, Some(rt._2))
-
-  implicit def tuple3ToCouchDocument[T](rt: (String, String, T))(implicit fmt: Format[T]): CouchDocument[T] =
-    CouchDocument(Some(rt._1), Some(rt._2), Some(rt._3))
 }
 
 case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: Option[T])(implicit fmt: Format[T]) {
 
-  private def create(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
-    val jsDoc = Json.toJson(this.doc.get).transform(AddCouchIdToJson).asOpt
+  def create(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
+    val jsDoc = this.doc match {
+      case Some(d) => Json.toJson(d).transform(AddCouchIdToJson).asOpt
+      case None => Json.parse("{}").asOpt
+    }
     couch.db("/").post(jsDoc.get.toString()) map { IdAndRevisionDocument }
   }
 
@@ -53,6 +48,10 @@ case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = Non
       revision(updatedDoc)
     }
   }
+
+  def withId(x: String) = this.copy(id = Some(x))
+  def withRev(x: String) = this.copy(rev = Some(x))
+  def withDoc[A](doc: A)(implicit fmt: Format[A]) = new CouchDocument(this.id, this.rev, Some(doc))
 
   override def toString = {
     s"CouchDocument(_id = ${id.get}, _rev = ${rev.get}, ${doc.get}"

@@ -23,8 +23,8 @@ object Asyncscouch extends App {
   implicit val profileFormat = Json.format[Profile]
 
   val future = for {
-    createdNoId <- create(profile)
-    created <- create("PROFILE_ID", profile)
+    createdNoId <- CouchDocument(profile).create
+    created <- CouchDocument("PROFILE_ID", profile).create
     docId = Id[Profile](createdNoId.id.get)
     retreived <- docId.retrieve
     updated <- createdNoId.update(current => current.copy(level = 1))

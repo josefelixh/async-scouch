@@ -3,7 +3,7 @@ import sbt.Keys._
 
 object AsyncscouchBuild extends Build {
 
-  val (projectOrganization, projectName, projectVersion) = ("org.josefelixh", "async-scouch", "0.1")
+  val (projectOrganization, projectName, projectVersion) = ("org.josefelixh", "async-scouch", "0.1-SNAPSHOT")
 
   val mandubianRepos = Seq(
     "Mandubian repository snapshots" at "https://github.com/mandubian/mandubian-mvn/raw/master/snapshots/",
