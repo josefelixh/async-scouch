@@ -3,10 +3,14 @@ package org.josefelixh
 import org.josefelixh.couch._
 import org.josefelixh.couch.CouchDocument._
 import play.api.libs.json._
-import scala.concurrent.{Future, Await}
+import scala.concurrent._
 import scala.concurrent.duration._
-import scala.concurrent.ExecutionContext.Implicits.global
-
+import scala.concurrent._
+import org.josefelixh.couch._
+import scala.Predef._
+import org.josefelixh.couch.CouchConfig
+import scala.Some
+import scala.util.{Success, Failure}
 
 
 object Asyncscouch extends App {
@@ -18,7 +22,11 @@ object Asyncscouch extends App {
   val role = Role("admin", 777)
   val profile = Profile("badger", 0, Vector(role))
 
-  implicit val couch = Couch("heroku")
+  val credentials = Some(("username", "password"))
+  val couchConfig: CouchConfig = CouchConfig("https://username.cloudant.com", "dbname", credentials)
+
+  implicit val executionContext = ExecutionContext.Implicits.global
+  implicit val couch = Couch(couchConfig)
   implicit val roleFormat = Json.format[Role]
   implicit val profileFormat = Json.format[Profile]
 
@@ -41,31 +49,14 @@ object Asyncscouch extends App {
     println(s"DELETED : ${deleteResponse2.json}")
   }
 
-  future.onFailure {
-    case t => println("An error has occured: " + t.getMessage)
+  future.onComplete {
+    case Success(x) => println("Success!!!")
+    case Failure(t) => println("An error has occured: " + t.getMessage)
   }
 
+
   import language.postfixOps
-  Await.result(future, 30 seconds)
-
-  def DeleteAll =
-    couch.documents map { response =>
-      println(s"Documents ${response.json}")
-      val ids = (response.json \\ "id") map { _.validate[String].asOpt }
-      for (id <- ids) yield id match {
-        case x @ Some(_) => {
-          println("Trying to delete id: " + id.get)
-          for {
-            doc <- CouchDocument[JsValue](x, None, Some(JsNull)).retrieve
-            deleteResponse <- doc.delete
-          } yield concurrent.future(println(s"Status: ${deleteResponse.statusText} Body: ${deleteResponse.body}"))
-        }
-
-        case None => concurrent.future(println("No Id found"))
-    }}
-
-//  Await.result(DeleteAll, 30 seconds) map {f => Await.ready(f, 20 seconds)}
-
-  System.exit(0)
+  Await.result(future, 10 seconds)
+  sys.exit(0)
 }
 

@@ -2,7 +2,7 @@ package org.josefelixh.couch
 
 import play.api.libs.functional._
 import play.api.libs.json._
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent._
 import org.josefelixh.libs.http.Response
 
 object CouchDocument {
