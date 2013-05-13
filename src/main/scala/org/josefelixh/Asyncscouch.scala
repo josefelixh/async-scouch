@@ -1,62 +1,62 @@
 package org.josefelixh
 
-import org.josefelixh.couch.{CouchDocument, Couch}
-import scala.util.parsing.json.JSON
+import org.josefelixh.couch._
+import org.josefelixh.couch.CouchDocument._
+import play.api.libs.json._
+import scala.concurrent._
+import scala.concurrent.duration._
+import scala.concurrent._
+import org.josefelixh.couch._
+import scala.Predef._
+import org.josefelixh.couch.CouchConfig
+import scala.Some
+import scala.util.{Success, Failure}
 
 
 object Asyncscouch extends App {
   println("Hello, async-scouch")
 
-  import scala.concurrent.ExecutionContext.Implicits.global
+  case class Role(name: String, permissions: Int)
+  case class Profile(id: String, level: Int, roles: Seq[Role])
 
-  implicit val couch = Couch("heroku")
+  val role = Role("admin", 777)
+  val profile = Profile("badger", 0, Vector(role))
 
-  couch.databases map {
-    value => println(value.body)
-  }
+  val credentials = Some(("username", "password"))
+  val couchConfig: CouchConfig = CouchConfig("https://username.cloudant.com", "dbname", credentials)
+
+  implicit val executionContext = ExecutionContext.Implicits.global
+  implicit val couch = Couch(couchConfig)
+  implicit val roleFormat = Json.format[Role]
+  implicit val profileFormat = Json.format[Profile]
 
   val future = for {
-    value <- couch.documents
-  } yield JSON.parseFull(value.body)
-
-  future map {
-    case Some(x: Map[_, _]) => println(x.mkString("\n"))
-    case _ => println("ooooops")
+    createdNoId <- CouchDocument(profile).create
+    created <- CouchDocument("PROFILE_ID", profile).create
+    docId = Id[Profile](createdNoId.id.get)
+    retreived <- docId.retrieve
+    updated <- createdNoId.update(current => current.copy(level = 1))
+    updateRetreived <- docId.retrieve
+    deleteResponse <- updated.delete
+    deleteResponse2 <- created.delete
+  } yield {
+    println(s"CREATED : $createdNoId")
+    println(s"CREATED : $created")
+    println(s"RETREIVED : $retreived")
+    println(s"UPDATED : $updated")
+    println(s"RETREIVED : $updateRetreived")
+    println(s"DELETED : ${deleteResponse.json}")
+    println(s"DELETED : ${deleteResponse2.json}")
   }
 
-  val doc = "{\"system\":\"badger\",\"type\":\"mushroom\",\"value\":\"snake\"}"
-
-//  CouchDocument(None, None, doc).create map { response =>
-//    println(response.status + " " + response.body)
-//  }
-//
-//  CouchDocument(Some("22790e05baaa21af392c8239807ea339"), None, "").retrieve map { response =>
-//    println(response.status + " " + response.body)
-//  }
-
-  CouchDocument(Some("myid"), None, doc).create map { response =>
-    println("CREATE: " + response.status + " " + response.body)
-
-    CouchDocument(Some("myid"), None, doc).retrieve map { response =>
-      println("RETRIEVE: " + response.status + " " + response.body)
-
-      val rev = (JSON.parseFull(response.body).get.asInstanceOf[Map[String, Any]].get("_rev")).asInstanceOf[Option[String]]
-
-      CouchDocument(Some("myid"), rev, doc).update map { response =>
-        println("UPDATE: " + response.status + " " + response.body)
-
-        val rev = (JSON.parseFull(response.body).get.asInstanceOf[Map[String, Any]].get("rev")).asInstanceOf[Option[String]]
-
-        CouchDocument(Some("myid"), rev, doc).delete map { response =>
-          println("DELETE: " + response.status + " " + response.body)
-        }
-
-      }
-    }
+  future.onComplete {
+    case Success(x) => println("Success!!!")
+    case Failure(t) => println("An error has occured: " + t.getMessage)
   }
 
 
-
-  Thread.sleep(10000)
-  System.exit(0)
+  import language.postfixOps
+  Await.result(future, 10 seconds)
+  sys.exit(0)
 }
+
