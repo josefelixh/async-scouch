@@ -47,7 +47,7 @@ class CouchSpec extends FlatSpec with MustMatchers with MockitoSugar {
     verify(requestMock).get()
     verifyNoMoreInteractions(requestMock)
 
-    requestMock.url must be === config.couchInstanceUrl +  "/test/_all_docs"
+    requestMock.url must be === config.couchInstanceUrl +  "/dbname/_all_docs"
   }
 
   it should "use GET http method and the right url when getting all dbs" in new CouchMock {
@@ -71,14 +71,4 @@ class CouchSpec extends FlatSpec with MustMatchers with MockitoSugar {
 
 
   }
-
-  trait CouchMock extends Couch {
-    override val config = CouchConfig("http://localhost", "test")
-    val requestMock = mock[WSRequestHolder]
-    override def couch(path: String): WSRequestHolder = {
-      when(requestMock.url).thenReturn(config.couchInstanceUrl+path)
-      requestMock
-    }
-  }
-
 }
