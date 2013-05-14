@@ -1,10 +1,10 @@
-##Async-scouch
+# Async-scouch
 Async-scouch is a BigCouch/Cloudant client library. It based on top of netty, ning asynchronous http client and the super cool play-json libraries based on jerkson/jackson. So far is targets scala, but the intention is to make it work for java as well.
 
 
-###Usage (Scala)
+### Usage (Scala)
 
-#####Basic CRUD operations
+##### Basic CRUD operations
 
 First you need some stuff to persist.
 
@@ -58,3 +58,13 @@ Then you can just use CouchDocument to do CRUD operations with your objects.
 In order to see some results it is needed to wait for the future, but this is something you might not want to do in your application.
 
     Await.result(future, 10 seconds)
+
+##Licence
+
+  This software is licensed under the Apache 2 license, quoted below.
+
+  Copyright 2013 josefelixh (http://github.com/josefelixh).
+    
+  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this project except in compliance with the License. You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0.
+
+  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
