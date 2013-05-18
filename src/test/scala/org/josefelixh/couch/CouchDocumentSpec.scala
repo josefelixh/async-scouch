@@ -12,7 +12,7 @@ import language.postfixOps
 
 class CouchDocumentSpec extends FlatSpec with MustMatchers with MockitoSugar {
 
-  "A CouchDocument" should "create objects" in new CouchMock {
+  "A CouchDocument object" should "persist the document when calling create" in new CouchMock {
 
     val responseMock = mock[Response]
     stub(responseMock.json).toReturn(jsonTestObjectSuccessResponse)
@@ -30,7 +30,7 @@ class CouchDocumentSpec extends FlatSpec with MustMatchers with MockitoSugar {
     requestMock.url must be === baseUrlMock + "/"
   }
 
-  it should "delete objects" in new CouchMock {
+  it should "delete the document when calling delete" in new CouchMock {
     val responseMock = mock[Response]
     stub(responseMock.json).toReturn(jsonTestObjectSuccessResponse)
     when(requestMock.delete()).thenReturn(future { responseMock })

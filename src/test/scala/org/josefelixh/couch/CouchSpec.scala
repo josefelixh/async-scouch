@@ -11,7 +11,7 @@ import org.joda.time.DateTime
 
 class CouchSpec extends FlatSpec with MustMatchers with MockitoSugar {
 
-  "Couch" should "build requests according to configuration" in new Couch {
+  "A Couch instance" should "build requests according to configuration" in new Couch {
     override val config = CouchConfig(
       couchInstanceUrl =  "http://couchurl.com",
       dbName =  "badger",
@@ -30,7 +30,7 @@ class CouchSpec extends FlatSpec with MustMatchers with MockitoSugar {
     verify(requestMock).get()
   }
 
-  it should "use PUT http method when empty body when calling create" in new CouchMock {
+  it should "use PUT http method with empty body when calling create" in new CouchMock {
     this.create
     verify(requestMock).put("{}")
   }
