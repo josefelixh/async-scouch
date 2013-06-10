@@ -20,78 +20,51 @@ object CouchDocument {
 
 }
 
-case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: Option[T])(implicit fmt: Format[T]) {
+case class CouchDocument[T](id: Option[String] = None, rev: Option[String] = None, doc: Option[T])(implicit fmt: Format[T])
+  extends JSONTransformers[T] with ResponseTransformers[T] {
 
   def create(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
     val jsDoc = this.doc match {
       case Some(d) => Json.toJson(d).transform(AddCouchIdToJson).asOpt
       case None => Json.parse("{}").asOpt
     }
-    couch.db("/").post(jsDoc.get.toString()) map { IdAndRevisionDocument }
+    val response = couch.db("/").post(jsDoc.get.toString())
+    response map { IdAndRevision }
   }
 
-  def retrieve(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] =
-    couch.db(s"/${id.get}").get() map { revisionAndDocument }
+  def retrieve(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
+    val response = couch.db(s"/${id.get}").get()
+    response map { implicit r =>  RevisionAndDocument }
+  }
 
-  def delete(implicit couch: Couch) =
-    couch.db(s"/${id.get}").withQueryString(
-      "rev" -> rev.get
-    ).delete()
+  def delete(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
+    val requestHolder = couch.db(s"/${id.get}").withQueryString("rev" -> rev.get)
+    val test = 123 :: 123 :: Nil
+    for ( response <- requestHolder.delete() ) yield {
+      if ((response.json \ "ok").validate[Boolean].getOrElse(false))
+        this.copy(id = None,rev = None)
+      else
+        this
+    }
+  }
 
   def update(updator: T => T)(implicit couch: Couch, execCtx: ExecutionContext): Future[CouchDocument[T]] = {
     val updatedDoc = updator(this.doc.get)
-    couch.db(s"/${id.get}").withQueryString(
+    val updatedDocJson = Json.toJson(updatedDoc)
+    val requestHolder = couch.db(s"/${id.get}").withQueryString(
       "rev" -> rev.get
     ).withHeaders(
       "If-Match" -> rev.get
-    ).put(Json.toJson(updatedDoc).toString()) map {
-      revision(updatedDoc)
-    }
+    )
+    val response = requestHolder.put(updatedDocJson.toString())
+    response map { Revision(updatedDoc)(_, fmt) }
   }
 
   def withId(x: String) = this.copy(id = Some(x))
   def withRev(x: String) = this.copy(rev = Some(x))
-  def withDoc[A](doc: A)(implicit fmt: Format[A]) = new CouchDocument(this.id, this.rev, Some(doc))
+  def withDoc[A](doc: A)(implicit fmt: Format[A]) = new CouchDocument(this.id, this.rev, Some(doc))(fmt)
 
   override def toString = {
     s"CouchDocument(_id = ${id.get}, _rev = ${rev.get}, ${doc.get}"
-  }
-
-  private def revisionAndDocument(response: Response): CouchDocument[T] = {
-    response.json.transform((__ \ 'ok).json.prune andThen ((__ \ '_id).json.prune andThen ((__ \ '_rev).json.prune))) map { js =>
-      this.copy(
-        rev = (response.json \ "_rev").validate[String].asOpt,
-        doc = js.validate[T](implicitly[Reads[T]]).asOpt
-      )
-    } getOrElse(throw new RuntimeException)
-  }
-
-  private def revision(updated: T)(response: Response): CouchDocument[T] = {
-    this.copy(
-      rev = (response.json \ "rev").validate[String].asOpt,
-      doc = Some(updated)
-    )
-  }
-
-  private val IdAndRevisionDocument: Response => CouchDocument[T] = { response =>
-    (response.json \ "ok").validate[Boolean] map { isOk =>
-      if (!isOk) throw new RuntimeException
-    }
-
-    this.copy(
-      id = (response.json \ "id").validate[String].asOpt,
-      rev = (response.json \ "rev").validate[String].asOpt
-    )
-  }
-
-  private val AddCouchIdToJson = {
-    val addCouchId =  __.json.update {
-      __.read[JsObject] map { o => Json.obj("_id" -> id.get) ++ o }
-    }
-
-    id match {
-      case Some(couchId) => addCouchId
-      case None => __.read[JsObject]
-    }
   }
 }

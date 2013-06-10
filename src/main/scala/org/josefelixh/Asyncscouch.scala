@@ -17,13 +17,13 @@ object Asyncscouch extends App {
   println("Hello, async-scouch")
 
   case class Role(name: String, permissions: Int)
-  case class Profile(id: String, level: Int, roles: Seq[Role])
+  case class Profile(id: String, level: Int, roles: Vector[Role])
 
   val role = Role("admin", 777)
   val profile = Profile("badger", 0, Vector(role))
 
-  val credentials = Some(("josefelixh", "cloudant123"))
-  val couchConfig: CouchConfig = CouchConfig("https://josefelixh.cloudant.com", "heroku", credentials)
+  val credentials = Some(("username", "password"))
+  val couchConfig: CouchConfig = CouchConfig("https://username.cloudant.com", "dbname", credentials)
 
   implicit val executionContext = ExecutionContext.Implicits.global
   implicit val couch = Couch(couchConfig)
@@ -45,8 +45,8 @@ object Asyncscouch extends App {
     println(s"RETREIVED : $retreived")
     println(s"UPDATED : $updated")
     println(s"RETREIVED : $updateRetreived")
-    println(s"DELETED : ${deleteResponse.json}")
-    println(s"DELETED : ${deleteResponse2.json}")
+    println(s"DELETED : ${deleteResponse}")
+    println(s"DELETED : ${deleteResponse2}")
   }
 
   future.onComplete {

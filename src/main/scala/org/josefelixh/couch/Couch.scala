@@ -22,7 +22,7 @@ trait Couch {
   private lazy val dbName = config.dbName
   private lazy val credentials = config.credentials
 
-  def couch(path: String): WSRequestHolder = {
+  private[couch] def couch(path: String): WSRequestHolder = {
     val ws = WS.url(s"$couchUrl$path")
       .withHeaders(
         "Accept" -> "application/json",
@@ -36,7 +36,7 @@ trait Couch {
   }
 
 
-  val db: String => WSRequestHolder = { path => couch(s"/$dbName$path") }
+  private[couch] val db: String => WSRequestHolder = { path => couch(s"/$dbName$path") }
 
   def info = db("/").get()
   def create = db("/").put("{}")
