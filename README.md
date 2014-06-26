@@ -1,5 +1,4 @@
 [![Build Status](https://travis-ci.org/josefelixh/async-scouch.svg?branch=master)](https://travis-ci.org/josefelixh/async-scouch)
-
 # Async-scouch
 Async-scouch is a BigCouch/Cloudant client library. It based on top of netty, ning asynchronous http client and the super cool play-json libraries based on jerkson/jackson. So far is targets scala, but the intention is to make it work for java as well.
 
